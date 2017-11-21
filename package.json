@@ -1,0 +1,35 @@
+{
+  "name": "ecs-service-image-updater",
+  "version": "0.1.0",
+  "description": "Update an ECS service with a new Docker image",
+  "main": "index.js",
+  "scripts": {
+    "test": "node_modules/.bin/mocha --recursive"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bugcrowd/ecs-service-image-updater.git"
+  },
+  "keywords": [
+    "ECS",
+    "Service",
+    "Docker"
+  ],
+  "author": "Coen Hyde",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bugcrowd/ecs-service-image-updater/issues"
+  },
+  "homepage": "https://github.com/bugcrowd/ecs-service-image-updater#readme",
+  "dependencies": {
+    "async": "^2.6.0",
+    "aws-sdk": "^2.154.0",
+    "lodash": "^4.17.4",
+    "yargs": "^10.0.3"
+  },
+  "devDependencies": {
+    "aws-sdk-mock": "^1.7.0",
+    "expect.js": "^0.3.1",
+    "mocha": "^4.0.1"
+  }
+}

@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+'use strict'
+
+const updater = require('../');
+
+var argv = require('yargs')
+  .demand([ 'cluster-arn', 'service-name', 'image', 'container-name' ])
+  .argv;
+
+var options = {
+  clusterArn: argv.clusterArn,
+  serviceName: argv.serviceName,
+  containerName: argv.containerName,
+  image: argv.image
+}
+
+updater(options, (err, taskDefinitionArn) => {
+  if (err) throw err;
+  console.log(`Service ${argv.serviceName} has been updated to use image ${argv.image} for container ${argv.containerName}`);
+});
