@@ -6,6 +6,7 @@ ECS Service Image Updater assists with updating an ECS Service to use a new Dock
 CLI Usage
 ---------
 
+```
 Options:
   --help            Show help                                          [boolean]
   --version         Show version number                                [boolean]
@@ -13,6 +14,7 @@ Options:
   --service-name                                                      [required]
   --image                                                             [required]
   --container-name                                                    [required]
+```
 
 Module Usage
 ------------
