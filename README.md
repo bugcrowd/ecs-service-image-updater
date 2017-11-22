@@ -20,6 +20,8 @@ Module Usage
 ------------
 
 ```js
+const updater = require('ecs-service-image-updater');
+
 var options = {
   clusterArn: 'clusterArn',
   serviceName: 'serviceName',
