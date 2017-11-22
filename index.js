@@ -4,14 +4,14 @@ const AWS = require('aws-sdk');
 const async = require('async');
 const _ = require('lodash');
 
-var updater = function(options, cb) {
-  // Set the default region to 'us-east-1' if not already set
-  if (!AWS.config.region) {
-    AWS.config.update({
-      region: process.env.AWS_DEFAULT_REGION || 'us-east-1'
-    });
-  }
+// Set the default region to 'us-east-1' if not already set
+if (!AWS.config.region) {
+  AWS.config.update({
+    region: process.env.AWS_DEFAULT_REGION || 'us-east-1'
+  });
+}
 
+var updater = function(options, cb) {
   async.waterfall([
     (next) => updater.currentTaskDefinition(options, next),
     (currentTaskDefinition, next) => {
