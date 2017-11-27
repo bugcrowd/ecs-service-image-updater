@@ -1,10 +1,13 @@
 {
   "name": "ecs-service-image-updater",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Update an ECS service with a new Docker image",
   "main": "index.js",
   "scripts": {
     "test": "node_modules/.bin/mocha --recursive"
+  },
+  "bin": {
+    "ecs-service-image-updater": "./bin/ecs-service-image-updater"
   },
   "repository": {
     "type": "git",
