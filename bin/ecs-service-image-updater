@@ -4,7 +4,14 @@
 const updater = require('../');
 
 var argv = require('yargs')
-  .demand([ 'cluster-arn', 'image', 'container-name' ])
+  .describe('image', 'Docker image and tag')
+  .describe('container-name', 'Container to update in the ECS Task Definition')
+  .describe('service-name', 'ECS Service to update')
+  .describe('task-definition-family', 'Task Definition Family create the new Task Definition in')
+  .describe('cluster-arn', 'Arn of the ECS Cluster for which the Service exists on. Used in conjunction with service-name')
+  .describe('output-arn-only', 'Output the new Task Definition Arn only')
+  .demand([ 'image', 'container-name' ])
+  .implies('service-name', 'cluster-arn')
   .conflicts('service-name', 'task-definition-family')
   .conflicts('task-definition-family', 'service-name')
   .argv;
