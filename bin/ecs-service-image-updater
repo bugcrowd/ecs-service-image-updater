@@ -4,17 +4,32 @@
 const updater = require('../');
 
 var argv = require('yargs')
-  .demand([ 'cluster-arn', 'service-name', 'image', 'container-name' ])
+  .demand([ 'cluster-arn', 'image', 'container-name' ])
+  .conflicts('service-name', 'task-definition-family')
+  .conflicts('task-definition-family', 'service-name')
   .argv;
 
 var options = {
   clusterArn: argv.clusterArn,
-  serviceName: argv.serviceName,
   containerName: argv.containerName,
   image: argv.image
 }
 
+if (argv.serviceName) options.serviceName = argv.serviceName;
+if (argv.taskDefinitionFamily) options.taskDefinitionFamily = argv.taskDefinitionFamily;
+
 updater(options, (err, taskDefinitionArn) => {
   if (err) throw err;
-  console.log(`Service ${argv.serviceName} has been updated to use image ${argv.image} for container ${argv.containerName}`);
+
+  if (argv.outputArnOnly) {
+    console.log(taskDefinitionArn);
+    return;
+  }
+
+  console.log(`Created Task Definition: ${taskDefinitionArn}`);
+
+  if (argv.serviceName) {
+    console.log(`Service ${argv.serviceName} has been updated to use the new Task Definition`);
+    return;
+  }
 });
