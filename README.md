@@ -8,13 +8,26 @@ CLI Usage
 
 ```
 Options:
-  --help            Show help                                          [boolean]
-  --version         Show version number                                [boolean]
-  --cluster-arn                                                       [required]
-  --service-name                                                      [required]
-  --image                                                             [required]
-  --container-name                                                    [required]
+  --help                    Show help                                  [boolean]
+  --version                 Show version number                        [boolean]
+  --image                   Docker image and tag                      [required]
+  --container-name          Container to update in the ECS Task Definition
+                                                                      [required]
+  --service-name            ECS Service to update
+  --task-definition-family  Task Definition Family create the new Task
+                            Definition in
+  --cluster-arn             Arn of the ECS Cluster for which the Service exists
+                            on. Used in conjunction with service-name
+  --output-arn-only         Output the new Task Definition Arn only
 ```
+
+### Examples
+
+#### Update an ECS Service to use a new image
+`$ ecs-service-image-updater --cluster-arn arn:aws:ecs:us-east-1:123456789:cluster/cluster --image image:tag --container-name app --service-name app`
+
+#### Create new Task Definition from latest Task Definition in a Task Definition Family
+`$ ecs-service-image-updater --image image:tag --container-name app --task-definition-family app`
 
 Module Usage
 ------------
