@@ -23,9 +23,12 @@ var updater = function(options, cb) {
 
       return updater.createTaskDefinition(newTaskDefinition, next);
     },
-    (taskDefinition, next) => updater.updateService(options, taskDefinition.taskDefinitionArn, (err, service) => {
-      return next(err, taskDefinition.taskDefinitionArn);
-    })
+    (taskDefinition, next) => {
+      if (!options.serviceName) return next(null, taskDefinition.taskDefinitionArn);
+      return updater.updateService(options, taskDefinition.taskDefinitionArn, (err, service) => {
+        return next(err, taskDefinition.taskDefinitionArn);
+      });
+    }
   ], cb);
 }
 
@@ -40,6 +43,37 @@ Object.assign(updater, {
   currentTaskDefinition(options, cb) {
     var ecs = new AWS.ECS();
 
+    if (!options.serviceName && !options.taskDefinitionFamily) {
+      return cb(new Error('Ensure either the serviceName or taskDefinitionFamily option are specified'));
+    }
+
+    async.parallel([
+      (done) => {
+        if (!options.taskDefinitionFamily) return done();
+        return updater.getLatestActiveTaskDefinition(options, done);
+      },
+      (done) => {
+        if (!options.serviceName) return done();
+        return updater.getServiceTaskDefinition(options, done)
+      }
+    ], (err, results) => {
+      if (err) return cb(err);
+      var taskDefinitionArn = _.filter(results, (result) => result)[0];
+      if (!taskDefinitionArn) return cb(new Error('Error could not find task definition'));
+      updater.getTaskDefinition(taskDefinitionArn, cb);
+    });
+  },
+
+  /**
+   * getServiceTaskDefinition
+   *
+   * Retrieve the active Task Definition Arn on a service
+   * @param {object} options A hash of options used when initiating this deployment
+   * @param {function} cb Callback
+   */
+  getServiceTaskDefinition(options, cb) {
+    var ecs = new AWS.ECS();
+
     var params = {
       cluster: options.clusterArn,
       services: [ options.serviceName ]
@@ -51,11 +85,50 @@ Object.assign(updater, {
       var service = _.find(data.services, (s) => s.serviceName === options.serviceName);
       if (!service) return cb(new Error(`Could not find service "${options.serviceName}"`));
 
-      var params = { taskDefinition: service.taskDefinition };
-      ecs.describeTaskDefinition(params, (err, data) => {
-        if (err) return cb(err);
-        return cb(null, data.taskDefinition);
-      });
+      cb(null, service.taskDefinition);
+    });
+  },
+
+  /**
+   * getLatestActiveTaskDefinition
+   *
+   * Retrieve the newest Task Definition Arn in a Task Definition Family
+   * @param {object} options A hash of options used when initiating this deployment
+   * @param {function} cb Callback
+   */
+  getLatestActiveTaskDefinition(options, cb) {
+    var ecs = new AWS.ECS();
+
+    var params = {
+      familyPrefix: options.taskDefinitionFamily,
+      sort: 'DESC',
+      status: 'ACTIVE'
+    };
+
+    ecs.listTaskDefinitions(params, function(err, data) {
+      if (err) return cb(err);
+      if (data.taskDefinitionArns.length === 0) {
+        return cb(new Error(`No Task Definitions found in family "${family}"`));
+      }
+
+      cb(err, data.taskDefinitionArns[0]);
+    });
+  },
+
+  /**
+   * getTaskDefinition
+   *
+   * Retrieve a task definition
+   * @param {object} options A hash of options used when initiating this deployment
+   * @param {function} cb Callback
+   */
+  getTaskDefinition(taskDefinitionArn, cb) {
+    var ecs = new AWS.ECS();
+    var params = { taskDefinition: taskDefinitionArn };
+
+    ecs.describeTaskDefinition(params, (err, data) => {
+      if (err) return cb(err);
+      return cb(null, data.taskDefinition);
     });
   },
 

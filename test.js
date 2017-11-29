@@ -10,7 +10,63 @@ AWS.setSDK(path.resolve('node_modules/aws-sdk'));
 const updater = require('./');
 
 describe('ECS Service Image Updater', function() {
-  it('should return the current task definition', function(done) {
+  var oldGetServiceTaskDefinition = updater.getServiceTaskDefinition;
+  var oldGetLatestActiveTaskDefinition = updater.getLatestActiveTaskDefinition;
+  var oldGetTaskDefinition = updater.getTaskDefinition;
+
+  afterEach(() => {
+    updater.getServiceTaskDefinition = oldGetServiceTaskDefinition;
+    updater.getLatestActiveTaskDefinition = oldGetLatestActiveTaskDefinition;
+    updater.getTaskDefinition = oldGetTaskDefinition;
+  });
+
+  it('currentTaskDefinition should return the current task definition from in Service', function(done) {
+    var serviceName = 'planet-express';
+    var taskDefinitionArn = 'arn::good-news:96';
+
+    updater.getServiceTaskDefinition = function(options, cb) {
+      return cb(null, taskDefinitionArn);
+    };
+
+    updater.getLatestActiveTaskDefinition = function(options, cb) {
+      // should never be called
+      expect(false).to.equal(true);
+    };
+
+    updater.getTaskDefinition = function(taskDefinitionArnSupplied, cb) {
+      return cb(null, { taskDefinitionArn: taskDefinitionArn});
+    };
+
+    updater.currentTaskDefinition({ serviceName: serviceName }, function(err, taskDefintion) {
+      expect(taskDefintion.taskDefinitionArn).to.equal(taskDefinitionArn);
+      done();
+    });
+  });
+
+  it('currentTaskDefinition should return the current task definition in a Task Definition Family', function(done) {
+    var family = 'simpsons';
+    var taskDefinitionArn = 'arn::good-news:96';
+
+    updater.getServiceTaskDefinition = function(options, cb) {
+      // should never be called
+      expect(false).to.equal(true);
+    };
+
+    updater.getLatestActiveTaskDefinition = function(options, cb) {
+      return cb(null, taskDefinitionArn);
+    };
+
+    updater.getTaskDefinition = function(taskDefinitionArnSupplied, cb) {
+      return cb(null, { taskDefinitionArn: taskDefinitionArn});
+    };
+
+    updater.currentTaskDefinition({ taskDefinitionFamily: family }, function(err, taskDefintion) {
+      expect(taskDefintion.taskDefinitionArn).to.equal(taskDefinitionArn);
+      done();
+    });
+  });
+
+  it('getServiceTaskDefinition should get the active task definition in Service', function(done) {
     var serviceName = 'planet-express';
     var taskDefinitionArn = 'arn::good-news:96';
 
@@ -25,18 +81,52 @@ describe('ECS Service Image Updater', function() {
       cb(null, data);
     });
 
+    updater.getServiceTaskDefinition({ serviceName: serviceName }, function(err, taskDefintionArnReturned) {
+      expect(taskDefintionArnReturned).to.equal(taskDefinitionArn);
+      done();
+    });
+  });
+
+  it('getLatestActiveTaskDefinition should get the latest task definition in a Task Definition Family', function(done) {
+    var family = 'simpsons';
+
+    AWS.mock('ECS', 'listTaskDefinitions', function(params, cb) {
+      expect(params).to.eql({
+        familyPrefix: family,
+        sort: 'DESC',
+        status: 'ACTIVE'
+      });
+
+      var data = {
+        taskDefinitionArns: [
+          "arn:2",
+          "arn:1",
+        ]
+      }
+      cb(null, data);
+    });
+
+    updater.getLatestActiveTaskDefinition({ taskDefinitionFamily: family }, function(err, taskDefintionArnReturned) {
+      expect(taskDefintionArnReturned).to.equal("arn:2");
+      done();
+    });
+  });
+
+  it('getTaskDefinition should return a task definition', function(done) {
+    var taskDefinitionArn = 'arn::good-news:96';
+
     AWS.mock('ECS', 'describeTaskDefinition', function(params, cb) {
       expect(params.taskDefinition).to.equal(taskDefinitionArn);
       cb(null, { taskDefinition: { taskDefinitionArn: taskDefinitionArn } });
     });
 
-    updater.currentTaskDefinition({ serviceName: serviceName }, function(err, taskDefintion) {
+    updater.getTaskDefinition(taskDefinitionArn, function(err, taskDefintion) {
       expect(taskDefintion.taskDefinitionArn).to.equal(taskDefinitionArn);
       done();
     });
   });
 
-  it('should update a task definition with a new image', function() {
+  it('updateTaskDefinitionImage should update a task definition with a new image', function() {
     var container = 'app';
     var image = 'image:2';
     var taskDefinition = {
@@ -53,7 +143,7 @@ describe('ECS Service Image Updater', function() {
     expect(updatedTaskDefinition['containerDefinitions'][0]['image']).to.equal(image);
   });
 
-  it('should register new task definition', function(done) {
+  it('createTaskDefinition should register new task definition', function(done) {
     var taskDefinition = {
       family: 'boo',
       containerDefinitions: []
@@ -71,7 +161,7 @@ describe('ECS Service Image Updater', function() {
     });
   });
 
-  it('should update service to use new task definition', function(done) {
+  it('updateService should update Service to use new Task Definition', function(done) {
     AWS.mock('ECS', 'updateService', function(params, cb) {
       expect(params).to.eql({
         cluster: 'arn:cluster',
