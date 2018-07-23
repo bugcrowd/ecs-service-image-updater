@@ -11,8 +11,11 @@ Options:
   --help                    Show help                                  [boolean]
   --version                 Show version number                        [boolean]
   --image                   Docker image and tag                      [required]
-  --container-name          Container to update in the ECS Task Definition
-                                                                      [required]
+  --container-name          Container to update in the ECS Task Definition.
+                            Conflicts with container-names.
+  --container-names         List of containers to update in the ECS Task
+                            Definition. Comma separated. Conflicts with
+                            container-name.
   --service-name            ECS Service to update
   --task-definition-family  Task Definition Family create the new Task
                             Definition in
@@ -38,7 +41,7 @@ const updater = require('ecs-service-image-updater');
 var options = {
   clusterArn: 'clusterArn',
   serviceName: 'serviceName',
-  containerName: 'containerName',
+  containerNames: ['containerName'],
   image: 'image:tag'
 }
 
