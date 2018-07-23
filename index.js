@@ -17,7 +17,7 @@ var updater = function(options, cb) {
     (currentTaskDefinition, next) => {
       var newTaskDefinition = updater.updateTaskDefinitionImage(
         currentTaskDefinition,
-        options.containerName,
+        options.containerNames,
         options.image
       );
 
@@ -132,13 +132,17 @@ Object.assign(updater, {
     });
   },
 
-  updateTaskDefinitionImage(taskDefinition, containerName, image) {
-    var newTaskDefinition = _.clone(taskDefinition);
-    var containerIndex = _.findIndex(newTaskDefinition.containerDefinitions, (containerDefinition) => {
-      return containerDefinition.name === containerName;
-    });
+  updateTaskDefinitionImage(taskDefinition, containerNames, image) {
+    if (!_.isArray(containerNames)) containerNames = [containerNames];
 
-    newTaskDefinition.containerDefinitions[containerIndex].image = image;
+    var newTaskDefinition = _.clone(taskDefinition);
+    containerNames.forEach((containerName) => {
+      var containerIndex = _.findIndex(newTaskDefinition.containerDefinitions, (containerDefinition) => {
+        return containerDefinition.name === containerName;
+      });
+      
+      newTaskDefinition.containerDefinitions[containerIndex].image = image;
+    });
 
     return _.pick(newTaskDefinition, [
       'containerDefinitions',

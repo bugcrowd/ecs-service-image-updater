@@ -232,7 +232,7 @@ describe('ECS Service Image Updater', function() {
 
       updater.updateTaskDefinitionImage = function(taskDefinition, containerName, image) {
         expect(taskDefinition.taskDefinitionArn).to.equal('arn');
-        expect(containerName).to.equal('containerName');
+        expect(containerName).to.eql(['containerName']);
         expect(image).to.equal('image:1');
         return { taskDefinitionArn: 'arn:updated' };
       };
@@ -251,7 +251,7 @@ describe('ECS Service Image Updater', function() {
       var options = {
         clusterArn: 'arn:cluster',
         serviceName: 'serviceName',
-        containerName: 'containerName',
+        containerNames: ['containerName'],
         image: 'image:1'
       }
 
