@@ -143,6 +143,34 @@ describe('ECS Service Image Updater', function() {
     expect(updatedTaskDefinition['containerDefinitions'][0]['image']).to.equal(image);
   });
 
+  it('updateTaskDefinitionImage should update a task definition with a new image in multiple containers', function() {
+    var oldImage = 'image:1';
+    var newImage = 'image:2';
+
+    var taskDefinition = {
+      taskDefinitionArn: 'arn',
+      containerDefinitions: [
+        {
+          name: 'app',
+          image: oldImage
+        },
+        {
+          name: 'worker',
+          image: oldImage
+        },
+        {
+          name: 'db',
+          image: oldImage
+        }
+      ]
+    };
+
+    var updatedTaskDefinition = updater.updateTaskDefinitionImage(taskDefinition, ['app', 'worker'], newImage);
+    expect(updatedTaskDefinition['containerDefinitions'][0]['image']).to.equal(newImage);
+    expect(updatedTaskDefinition['containerDefinitions'][1]['image']).to.equal(newImage);
+    expect(updatedTaskDefinition['containerDefinitions'][2]['image']).to.equal(oldImage);
+  });
+
   it('createTaskDefinition should register new task definition', function(done) {
     var taskDefinition = {
       family: 'boo',
