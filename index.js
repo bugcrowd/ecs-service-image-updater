@@ -14,15 +14,22 @@ if (!AWS.config.region) {
 var updater = function(options, cb) {
   async.waterfall([
     (next) => updater.currentTaskDefinition(options, next),
-    (currentTaskDefinition, next) => {
-      var newTaskDefinition = updater.updateTaskDefinitionImage(
-        currentTaskDefinition,
-        options.containerNames,
-        options.image
-      );
-
-      return updater.createTaskDefinition(newTaskDefinition, next);
-    },
+    (currentTaskDefinition, next) =>
+      updater.createTaskDefinition(
+        {
+          containerDefinitions: updater.updateTaskDefinitionImage(
+            currentTaskDefinition,
+            options.containerNames,
+            options.image
+          ),
+          family: currentTaskDefinition.family,
+          networkMode: currentTaskDefinition.networkMode,
+          placementConstraints: currentTaskDefinition.placementConstraints,
+          taskRoleArn: currentTaskDefinition.taskRoleArn,
+          volumes: currentTaskDefinition.volumes
+        },
+        next
+      ),
     (taskDefinition, next) => {
       if (!options.serviceName) return next(null, taskDefinition.taskDefinitionArn);
       return updater.updateService(options, taskDefinition.taskDefinitionArn, (err, service) => {
@@ -133,25 +140,10 @@ Object.assign(updater, {
   },
 
   updateTaskDefinitionImage(taskDefinition, containerNames, image) {
-    if (!_.isArray(containerNames)) containerNames = [containerNames];
-
-    var newTaskDefinition = _.clone(taskDefinition);
-    containerNames.forEach((containerName) => {
-      var containerIndex = _.findIndex(newTaskDefinition.containerDefinitions, (containerDefinition) => {
-        return containerDefinition.name === containerName;
-      });
-      
-      newTaskDefinition.containerDefinitions[containerIndex].image = image;
-    });
-
-    return _.pick(newTaskDefinition, [
-      'containerDefinitions',
-      'family',
-      'networkMode',
-      'placementConstraints',
-      'taskRoleArn',
-      'volumes'
-    ]);
+    return taskDefinition.containerDefinitions.map(
+      def =>
+        [].concat(containerNames).includes(def.name) ? { ...def, image } : def
+    );
   },
 
   /**
