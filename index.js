@@ -150,7 +150,10 @@ Object.assign(updater, {
       'networkMode',
       'placementConstraints',
       'taskRoleArn',
-      'volumes'
+      'volumes',
+      'requiresCompatibilities',
+      'cpu',
+      'memory'
     ]);
   },
 
