@@ -25,10 +25,10 @@
   },
   "homepage": "https://github.com/bugcrowd/ecs-service-image-updater#readme",
   "dependencies": {
-    "async": "^2.6.0",
+    "async": "^2.6.3",
     "aws-sdk": "^2.577.0",
-    "lodash": "^4.17.11",
-    "yargs": "^10.0.3"
+    "lodash": "^4.17.15",
+    "yargs": "^10.1.2"
   },
   "devDependencies": {
     "aws-sdk-mock": "^1.7.0",
