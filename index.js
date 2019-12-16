@@ -146,6 +146,7 @@ Object.assign(updater, {
 
     return _.pick(newTaskDefinition, [
       'containerDefinitions',
+      'executionRoleArn',
       'family',
       'networkMode',
       'placementConstraints',
