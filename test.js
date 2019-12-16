@@ -131,6 +131,7 @@ describe('ECS Service Image Updater', function () {
     var image = 'image:2';
     var taskDefinition = {
       taskDefinitionArn: 'arn',
+      executionRoleArn: 'arn:role',
       containerDefinitions: [
         {
           name: container,
@@ -141,6 +142,7 @@ describe('ECS Service Image Updater', function () {
 
     var updatedTaskDefinition = updater.updateTaskDefinitionImage(taskDefinition, container, image);
     expect(updatedTaskDefinition['containerDefinitions'][0]['image']).to.equal(image);
+    expect(updatedTaskDefinition['executionRoleArn']).to.equal(taskDefinition.executionRoleArn);
   });
 
   it('updateTaskDefinitionImage should update a task definition with a new image in multiple containers', function () {
