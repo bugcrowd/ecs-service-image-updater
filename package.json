@@ -1,6 +1,6 @@
 {
   "name": "ecs-service-image-updater",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Update an ECS service with a new Docker image",
   "main": "index.js",
   "scripts": {
