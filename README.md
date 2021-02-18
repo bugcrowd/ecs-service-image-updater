@@ -22,6 +22,8 @@ Options:
   --cluster-arn             Arn of the ECS Cluster for which the Service exists
                             on. Used in conjunction with service-name
   --output-arn-only         Output the new Task Definition Arn only
+  --wait-interval           Poll service deployment status at interval (seconds) and wait for completed deployment
+  --verbose-deployment      Output deployment progress to console (requires wait-interval)
 ```
 
 ### Examples
