@@ -3,6 +3,8 @@ ECS Service Image Updater
 
 ECS Service Image Updater assists with updating an ECS Service to use a new Docker image. If all you are changing is the image (eg new version of your application) it can be cumbersome to create a new Task Definition. It will copy the current running Task Definition in the Service, update the image, publish the new Task Definition and update the Service to use the new Task Definition.
 
+**NOTE:** We have moved the package under our `bugcrowd` NPM organization - this will be the only package location maintained going forward.
+
 CLI Usage
 ---------
 
