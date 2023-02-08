@@ -11,8 +11,10 @@ var argv = require('yargs')
   .describe('task-definition-family', 'Task Definition Family create the new Task Definition in')
   .describe('cluster-arn', 'Arn of the ECS Cluster for which the Service exists on. Used in conjunction with service-name')
   .describe('output-arn-only', 'Output the new Task Definition Arn only')
+  .describe('wait', 'Wait for the service to be stable after updating')
   .demand([ 'image' ])
   .implies('service-name', 'cluster-arn')
+  .implies('wait', 'service-name')
   .conflicts('container-name', 'container-names')
   .conflicts('service-name', 'task-definition-family')
   .conflicts('task-definition-family', 'service-name')
@@ -24,7 +26,8 @@ var argv = require('yargs')
 var options = {
   clusterArn: argv.clusterArn,
   containerNames: argv.containerNames,
-  image: argv.image
+  image: argv.image,
+  wait: argv.wait
 }
 
 if (argv.containerName) options.containerNames = [ argv.containerName ];

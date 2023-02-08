@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 const AWS = require('aws-sdk');
 const async = require('async');
@@ -7,7 +7,7 @@ const _ = require('lodash');
 // Set the default region to 'us-east-1' if not already set
 if (!AWS.config.region) {
   AWS.config.update({
-    region: process.env.AWS_DEFAULT_REGION || 'us-east-1'
+    region: process.env.AWS_DEFAULT_REGION || 'us-east-1',
   });
 }
 
@@ -18,7 +18,7 @@ var updater = function(options, cb) {
       var newTaskDefinition = updater.updateTaskDefinitionImage(
         currentTaskDefinition,
         options.containerNames,
-        options.image
+        options.image,
       );
 
       return updater.createTaskDefinition(newTaskDefinition, next);
@@ -28,9 +28,15 @@ var updater = function(options, cb) {
       return updater.updateService(options, taskDefinition.taskDefinitionArn, (err, service) => {
         return next(err, taskDefinition.taskDefinitionArn);
       });
-    }
+    },
+    (taskDefinitionArn, next) => {
+      if (!options.wait) return next(null, taskDefinitionArn);
+      return updater.waitForStableDeployment(options, (err, service) => {
+        return next(err, taskDefinitionArn);
+      });
+    },
   ], cb);
-}
+};
 
 Object.assign(updater, {
   /**
@@ -54,8 +60,8 @@ Object.assign(updater, {
       },
       (done) => {
         if (!options.serviceName) return done();
-        return updater.getServiceTaskDefinition(options, done)
-      }
+        return updater.getServiceTaskDefinition(options, done);
+      },
     ], (err, results) => {
       if (err) return cb(err);
       var taskDefinitionArn = _.filter(results, (result) => result)[0];
@@ -76,7 +82,7 @@ Object.assign(updater, {
 
     var params = {
       cluster: options.clusterArn,
-      services: [ options.serviceName ]
+      services: [options.serviceName],
     };
 
     ecs.describeServices(params, (err, data) => {
@@ -102,7 +108,7 @@ Object.assign(updater, {
     var params = {
       familyPrefix: options.taskDefinitionFamily,
       sort: 'DESC',
-      status: 'ACTIVE'
+      status: 'ACTIVE',
     };
 
     ecs.listTaskDefinitions(params, function(err, data) {
@@ -140,7 +146,7 @@ Object.assign(updater, {
       var containerIndex = _.findIndex(newTaskDefinition.containerDefinitions, (containerDefinition) => {
         return containerDefinition.name === containerName;
       });
-      
+
       newTaskDefinition.containerDefinitions[containerIndex].image = image;
     });
 
@@ -154,7 +160,7 @@ Object.assign(updater, {
       'volumes',
       'requiresCompatibilities',
       'cpu',
-      'memory'
+      'memory',
     ]);
   },
 
@@ -189,12 +195,25 @@ Object.assign(updater, {
     var params = {
       cluster: options.clusterArn,
       service: options.serviceName,
-      taskDefinition: taskDefinitionArn
+      taskDefinition: taskDefinitionArn,
     };
 
     ecs.updateService(params, (err, data) => {
       if (err) return cb(err);
       cb(null, data.service);
+    });
+  },
+
+  waitForStableDeployment(options, cb) {
+    var ecs = new AWS.ECS();
+    var params = {
+      cluster: options.clusterArn,
+      services: [options.serviceName],
+    };
+
+    ecs.waitFor('servicesStable', params, (err, data) => {
+      if (err) return cb(err);
+      cb(null, data.services[0]);
     });
   },
 });
