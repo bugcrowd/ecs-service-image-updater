@@ -1,5 +1,5 @@
 {
-  "name": "@bugcrowd/ecs-service-image-updater",
+  "name": "marko298/ecs-service-image-updater",
   "version": "0.1.10",
   "description": "Update an ECS service with a new Docker image",
   "main": "index.js",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bugcrowd/ecs-service-image-updater.git"
+    "url": "git+https://github.com/marko298/ecs-service-image-updater.git"
   },
   "keywords": [
     "ECS",
@@ -21,9 +21,9 @@
   "author": "Coen Hyde",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/bugcrowd/ecs-service-image-updater/issues"
+    "url": "https://github.com/marko298/ecs-service-image-updater/issues"
   },
-  "homepage": "https://github.com/bugcrowd/ecs-service-image-updater#readme",
+  "homepage": "https://github.com/marko298/ecs-service-image-updater#readme",
   "dependencies": {
     "async": "^3.2.0",
     "aws-sdk": "^2.730.0",
