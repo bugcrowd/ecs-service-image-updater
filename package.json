@@ -4,7 +4,7 @@
   "description": "Update an ECS service with a new Docker image",
   "main": "index.js",
   "scripts": {
-    "test": "node_modules/.bin/mocha --recursive"
+    "test": "mocha --recursive"
   },
   "bin": {
     "ecs-service-image-updater": "./bin/ecs-service-image-updater"
