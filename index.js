@@ -1,21 +1,17 @@
 'use strict'
 
-const AWS = require('aws-sdk');
+const { ECS } = require("@aws-sdk/client-ecs");
 const async = require('async');
 const _ = require('lodash');
 
 // Set the default region to 'us-east-1' if not already set
-if (!AWS.config.region) {
-  AWS.config.update({
-    region: process.env.AWS_DEFAULT_REGION || 'us-east-1'
-  });
-}
+const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 
-var updater = function(options, cb) {
+var updater = function (options, cb) {
   async.waterfall([
     (next) => updater.currentTaskDefinition(options, next),
     (currentTaskDefinition, next) => {
-      var newTaskDefinition = updater.updateTaskDefinitionImage(
+      const newTaskDefinition = updater.updateTaskDefinitionImage(
         currentTaskDefinition,
         options.containerNames,
         options.image
@@ -41,8 +37,6 @@ Object.assign(updater, {
    * @param {function} cb Callback
    */
   currentTaskDefinition(options, cb) {
-    var ecs = new AWS.ECS();
-
     if (!options.serviceName && !options.taskDefinitionFamily) {
       return cb(new Error('Ensure either the serviceName or taskDefinitionFamily option are specified'));
     }
@@ -58,7 +52,7 @@ Object.assign(updater, {
       }
     ], (err, results) => {
       if (err) return cb(err);
-      var taskDefinitionArn = _.filter(results, (result) => result)[0];
+      const taskDefinitionArn = _.filter(results, (result) => result)[0];
       if (!taskDefinitionArn) return cb(new Error('Error could not find task definition'));
       updater.getTaskDefinition(taskDefinitionArn, cb);
     });
@@ -72,21 +66,21 @@ Object.assign(updater, {
    * @param {function} cb Callback
    */
   getServiceTaskDefinition(options, cb) {
-    var ecs = new AWS.ECS();
+    const ecs = new ECS({ region: region });
 
-    var params = {
+    const params = {
       cluster: options.clusterArn,
-      services: [ options.serviceName ]
+      services: [options.serviceName]
     };
 
-    ecs.describeServices(params, (err, data) => {
-      if (err) return cb(err);
+    ecs.describeServices(params)
+      .then((data) => {
+        const service = _.find(data.services, (s) => s.serviceName === options.serviceName);
+        if (!service) return cb(new Error(`Could not find service "${options.serviceName}"`));
 
-      var service = _.find(data.services, (s) => s.serviceName === options.serviceName);
-      if (!service) return cb(new Error(`Could not find service "${options.serviceName}"`));
-
-      cb(null, service.taskDefinition);
-    });
+        cb(null, service.taskDefinition);
+      })
+      .catch(err => cb(err));
   },
 
   /**
@@ -97,22 +91,23 @@ Object.assign(updater, {
    * @param {function} cb Callback
    */
   getLatestActiveTaskDefinition(options, cb) {
-    var ecs = new AWS.ECS();
+    const ecs = new ECS({ region: region });
 
-    var params = {
+    const params = {
       familyPrefix: options.taskDefinitionFamily,
       sort: 'DESC',
       status: 'ACTIVE'
     };
 
-    ecs.listTaskDefinitions(params, function(err, data) {
-      if (err) return cb(err);
-      if (data.taskDefinitionArns.length === 0) {
-        return cb(new Error(`No Task Definitions found in family "${family}"`));
-      }
+    ecs.listTaskDefinitions(params)
+      .then((data) => {
+        if (data.taskDefinitionArns.length === 0) {
+          return cb(new Error(`No Task Definitions found in family "${family}"`));
+        }
 
-      cb(err, data.taskDefinitionArns[0]);
-    });
+        cb(null, data.taskDefinitionArns[0]);
+      })
+      .catch(err => cb(err));
   },
 
   /**
@@ -123,24 +118,23 @@ Object.assign(updater, {
    * @param {function} cb Callback
    */
   getTaskDefinition(taskDefinitionArn, cb) {
-    var ecs = new AWS.ECS();
-    var params = { taskDefinition: taskDefinitionArn };
+    const ecs = new ECS({ region: region });
+    const params = { taskDefinition: taskDefinitionArn };
 
-    ecs.describeTaskDefinition(params, (err, data) => {
-      if (err) return cb(err);
-      return cb(null, data.taskDefinition);
-    });
+    ecs.describeTaskDefinition(params)
+      .then(data => cb(null, data.taskDefinition))
+      .catch(err => cb(err));
   },
 
   updateTaskDefinitionImage(taskDefinition, containerNames, image) {
     if (!_.isArray(containerNames)) containerNames = [containerNames];
 
-    var newTaskDefinition = _.clone(taskDefinition);
+    const newTaskDefinition = _.clone(taskDefinition);
     containerNames.forEach((containerName) => {
-      var containerIndex = _.findIndex(newTaskDefinition.containerDefinitions, (containerDefinition) => {
+      const containerIndex = _.findIndex(newTaskDefinition.containerDefinitions, (containerDefinition) => {
         return containerDefinition.name === containerName;
       });
-      
+
       newTaskDefinition.containerDefinitions[containerIndex].image = image;
     });
 
@@ -168,12 +162,11 @@ Object.assign(updater, {
    * @param {function} cb Callback
    */
   createTaskDefinition(newTaskDefinition, cb) {
-    var ecs = new AWS.ECS();
+    const ecs = new ECS({ region: region });
 
-    ecs.registerTaskDefinition(newTaskDefinition, (err, data) => {
-      if (err) return cb(err);
-      return cb(null, data.taskDefinition);
-    });
+    ecs.registerTaskDefinition(newTaskDefinition)
+      .then(data => cb(null, data.taskDefinition))
+      .catch(err => cb(err));
   },
 
   /**
@@ -185,17 +178,16 @@ Object.assign(updater, {
    * @param {function} cb Callback
    */
   updateService(options, taskDefinitionArn, cb) {
-    var ecs = new AWS.ECS();
-    var params = {
+    const ecs = new ECS({ region: region });
+    const params = {
       cluster: options.clusterArn,
       service: options.serviceName,
       taskDefinition: taskDefinitionArn
     };
 
-    ecs.updateService(params, (err, data) => {
-      if (err) return cb(err);
-      cb(null, data.service);
-    });
+    ecs.updateService(params)
+      .then(data => cb(null, data.service))
+      .catch(err => cb(err));
   },
 });
 
