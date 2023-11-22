@@ -7,7 +7,7 @@ const _ = require('lodash');
 // Set the default region to 'us-east-1' if not already set
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 
-var updater = function (options, cb) {
+const updater = function (options, cb) {
   async.waterfall([
     (next) => updater.currentTaskDefinition(options, next),
     (currentTaskDefinition, next) => {
