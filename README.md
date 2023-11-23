@@ -40,7 +40,7 @@ Module Usage
 ```js
 const updater = require('ecs-service-image-updater');
 
-var options = {
+const options = {
   clusterArn: 'clusterArn',
   serviceName: 'serviceName',
   containerNames: ['containerName'],
