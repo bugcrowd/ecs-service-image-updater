@@ -76,7 +76,7 @@ Object.assign(updater, {
     ecs.describeServices(params)
       .then((data) => {
         const service = _.find(data.services, (s) => s.serviceName === options.serviceName);
-        if (!service) return cb(new Error(`Could not find service "${options.serviceName}"`));
+        if (!service) throw new Error(`Could not find service "${options.serviceName}"`);
 
         cb(null, service.taskDefinition);
       })
@@ -122,8 +122,8 @@ Object.assign(updater, {
     const params = { taskDefinition: taskDefinitionArn };
 
     ecs.describeTaskDefinition(params)
-      .then(data => cb(null, data.taskDefinition))
-      .catch(err => cb(err));
+      .then(data => cb(null, data.taskDefinition));
+    // .catch is not here to allow errors to propagate properly without double-calling the callback function.
   },
 
   updateTaskDefinitionImage(taskDefinition, containerNames, image) {
@@ -134,6 +134,11 @@ Object.assign(updater, {
       const containerIndex = _.findIndex(newTaskDefinition.containerDefinitions, (containerDefinition) => {
         return containerDefinition.name === containerName;
       });
+
+      // Container was not found in the existing task definition
+      if (containerIndex === -1) {
+        throw new Error(`Could not find container name "${containerName}" in existing task definition`);
+      }
 
       newTaskDefinition.containerDefinitions[containerIndex].image = image;
     });
