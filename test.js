@@ -173,11 +173,11 @@ describe('ECS Service Image Updater', function () {
       serviceName: 'serviceName',
     };
 
-    updater.updateService(options, 'arn:taskDefinition', (err, service) => {
-      expect(err).to.equal(null);
-      expect(service).to.eql({ serviceName: 'serviceName' });
-      done();
-    });
+    updater.updateService(options, 'arn:taskDefinition')
+      .then((service) => {
+        expect(service).to.eql({ serviceName: 'serviceName' });
+        done();
+      });
   });
 
   describe('Wrap up', function () {
@@ -206,13 +206,13 @@ describe('ECS Service Image Updater', function () {
 
       ecsMock.on(RegisterTaskDefinitionCommand).callsFake((taskDefinition) => {
         expect(taskDefinition.taskDefinitionArn).to.equal('arn:updated');
-        return Promise.resolve({ taskDefinitionArn: 'arn:created' });
+        return Promise.resolve({ taskDefinition: { taskDefinitionArn: 'arn:created' } });
       });
 
-      updater.updateService = function (optionsSupplied, taskDefinitionArn, cb) {
+      updater.updateService = (optionsSupplied, taskDefinitionArn) => {
         expect(optionsSupplied).to.eql(options);
         expect(taskDefinitionArn).to.equal('arn:created');
-        cb(null, { taskDefinition: 'arn:created' });
+        return Promise.resolve({ taskDefinition: 'arn:created' });
       }
 
       const options = {

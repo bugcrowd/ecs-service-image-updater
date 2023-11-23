@@ -20,16 +20,15 @@ const updater = function (options, cb) {
       );
 
       ecs.registerTaskDefinition(newTaskDefinition)
-        .then((taskDefinition) => {
-          next(null, taskDefinition);
-        })
+        .then(data => next(null, data.taskDefinition))
         .catch(err => next(err));
     },
     (taskDefinition, next) => {
       if (!options.serviceName) return next(null, taskDefinition.taskDefinitionArn);
-      return updater.updateService(options, taskDefinition.taskDefinitionArn, (err, service) => {
-        return next(err, taskDefinition.taskDefinitionArn);
-      });
+
+      updater.updateService(options, taskDefinition.taskDefinitionArn)
+        .then(service => next(null, taskDefinition.taskDefinitionArn))
+        .catch(err => next(err));
     }
   ], cb);
 }
@@ -167,9 +166,9 @@ Object.assign(updater, {
    * Update the service to use a new Task Definition
    * @param {object} options A hash of options used when initiating this deployment
    * @param {sting} taskDefinitionArn The task definition to deploy
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  updateService(options, taskDefinitionArn, cb) {
+  updateService(options, taskDefinitionArn) {
     const ecs = new ECS({ region: region });
     const params = {
       cluster: options.clusterArn,
@@ -177,9 +176,8 @@ Object.assign(updater, {
       taskDefinition: taskDefinitionArn
     };
 
-    ecs.updateService(params)
-      .then(data => cb(null, data.service))
-      .catch(err => cb(err));
+    return ecs.updateService(params)
+      .then(data => data.service);
   },
 });
 
