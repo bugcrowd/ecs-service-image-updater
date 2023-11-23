@@ -25,18 +25,8 @@ describe('ECS Service Image Updater', function () {
     const serviceName = 'planet-express';
     const taskDefinitionArn = 'arn::good-news:96';
 
-    updater.getServiceTaskDefinition = function (options, cb) {
-      return cb(null, taskDefinitionArn);
-    };
-
-    updater.getLatestActiveTaskDefinition = function (options, cb) {
-      // should never be called
-      expect(false).to.equal(true);
-    };
-
-    updater.getTaskDefinition = function (taskDefinitionArnSupplied, cb) {
-      return cb(null, { taskDefinitionArn: taskDefinitionArn });
-    };
+    updater.getServiceTaskDefinition = () => Promise.resolve(taskDefinitionArn);
+    updater.getTaskDefinition = _taskDefinitionArnSupplied => Promise.resolve({ taskDefinitionArn: taskDefinitionArn });
 
     updater.currentTaskDefinition({ serviceName: serviceName }, function (err, taskDefinition) {
       expect(taskDefinition.taskDefinitionArn).to.equal(taskDefinitionArn);
@@ -48,18 +38,8 @@ describe('ECS Service Image Updater', function () {
     const family = 'simpsons';
     const taskDefinitionArn = 'arn::good-news:96';
 
-    updater.getServiceTaskDefinition = function (options, cb) {
-      // should never be called
-      expect(false).to.equal(true);
-    };
-
-    updater.getLatestActiveTaskDefinition = function (options, cb) {
-      return cb(null, taskDefinitionArn);
-    };
-
-    updater.getTaskDefinition = function (taskDefinitionArnSupplied, cb) {
-      return cb(null, { taskDefinitionArn: taskDefinitionArn });
-    };
+    updater.getLatestActiveTaskDefinition = () => Promise.resolve(taskDefinitionArn);
+    updater.getTaskDefinition = _taskDefinitionArnSupplied => Promise.resolve({ taskDefinitionArn: taskDefinitionArn });
 
     updater.currentTaskDefinition({ taskDefinitionFamily: family }, function (err, taskDefintion) {
       expect(taskDefintion.taskDefinitionArn).to.equal(taskDefinitionArn);
@@ -83,10 +63,11 @@ describe('ECS Service Image Updater', function () {
       return Promise.resolve(data);
     });
 
-    updater.getServiceTaskDefinition({ serviceName: serviceName }, function (err, taskDefinitionArnReturned) {
-      expect(taskDefinitionArnReturned).to.equal(taskDefinitionArn);
-      done();
-    });
+    updater.getServiceTaskDefinition({ serviceName: serviceName })
+      .then((taskDefinitionArnReturned) => {
+        expect(taskDefinitionArnReturned).to.equal(taskDefinitionArn);
+        done();
+      });
   });
 
   it('getLatestActiveTaskDefinition should get the latest task definition in a Task Definition Family', function (done) {
@@ -108,10 +89,11 @@ describe('ECS Service Image Updater', function () {
       return Promise.resolve(data);
     });
 
-    updater.getLatestActiveTaskDefinition({ taskDefinitionFamily: family }, function (err, taskDefintionArnReturned) {
-      expect(taskDefintionArnReturned).to.equal("arn:2");
-      done();
-    });
+    updater.getLatestActiveTaskDefinition({ taskDefinitionFamily: family })
+      .then((taskDefinitionArnReturned) => {
+        expect(taskDefinitionArnReturned).to.equal("arn:2");
+        done();
+      });
   });
 
   it('getTaskDefinition should return a task definition', function (done) {
@@ -122,10 +104,11 @@ describe('ECS Service Image Updater', function () {
       return Promise.resolve({ taskDefinition: { taskDefinitionArn: taskDefinitionArn } });
     });
 
-    updater.getTaskDefinition(taskDefinitionArn, function (err, taskDefintion) {
-      expect(taskDefintion.taskDefinitionArn).to.equal(taskDefinitionArn);
-      done();
-    });
+    updater.getTaskDefinition(taskDefinitionArn)
+      .then((taskDefinition) => {
+        expect(taskDefinition.taskDefinitionArn).to.equal(taskDefinitionArn);
+        done();
+      });
   });
 
   it('updateTaskDefinitionImage should update a task definition with a new image', function () {

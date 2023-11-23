@@ -32,7 +32,10 @@ if (argv.serviceName) options.serviceName = argv.serviceName;
 if (argv.taskDefinitionFamily) options.taskDefinitionFamily = argv.taskDefinitionFamily;
 
 updater(options, (err, taskDefinitionArn) => {
-  if (err) throw err;
+  if (err) {
+    console.log(err.toString());
+    process.exit(1);
+  }
 
   if (argv.outputArnOnly) {
     console.log(taskDefinitionArn);

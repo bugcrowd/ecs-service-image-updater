@@ -41,30 +41,17 @@ Object.assign(updater, {
       return cb(new Error('Ensure either the serviceName or taskDefinitionFamily option are specified'));
     }
 
-    const latestTaskDefinition = new Promise((resolve, reject) => {
-      if (!options.taskDefinitionFamily) resolve();
-
-      updater.getLatestActiveTaskDefinition(options, (err, result) => {
-        if (err) { reject(err); }
-        else { resolve(result); }
-      });
-    });
-    const serviceTaskDefinition = new Promise((resolve, reject) => {
-      if (!options.serviceName) resolve();
-
-      updater.getServiceTaskDefinition(options, (err, result) => {
-        if (err) { reject(err); }
-        else { resolve(result); }
-      });
-    })
-
-    Promise.all([latestTaskDefinition, serviceTaskDefinition])
+    Promise.all([
+      updater.getLatestActiveTaskDefinition(options),
+      updater.getServiceTaskDefinition(options)
+    ])
       .then((results) => {
         const taskDefinitionArn = _.filter(results, (result) => result)[0];
         if (!taskDefinitionArn) throw new Error('Error could not find task definition');
 
-        updater.getTaskDefinition(taskDefinitionArn, cb);
+        return updater.getTaskDefinition(taskDefinitionArn);
       })
+      .then(taskDefinition => cb(null, taskDefinition))
       .catch(err => cb(err));
   },
 
@@ -73,9 +60,11 @@ Object.assign(updater, {
    *
    * Retrieve the active Task Definition Arn on a service
    * @param {object} options A hash of options used when initiating this deployment
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  getServiceTaskDefinition(options, cb) {
+  getServiceTaskDefinition(options) {
+    if (!options.serviceName) return Promise.resolve();
+
     const ecs = new ECS({ region: region });
 
     const params = {
@@ -83,14 +72,13 @@ Object.assign(updater, {
       services: [options.serviceName]
     };
 
-    ecs.describeServices(params)
+    return ecs.describeServices(params)
       .then((data) => {
         const service = _.find(data.services, (s) => s.serviceName === options.serviceName);
         if (!service) throw new Error(`Could not find service "${options.serviceName}"`);
 
-        cb(null, service.taskDefinition);
-      })
-      .catch(err => cb(err));
+        return service.taskDefinition;
+      });
   },
 
   /**
@@ -98,9 +86,11 @@ Object.assign(updater, {
    *
    * Retrieve the newest Task Definition Arn in a Task Definition Family
    * @param {object} options A hash of options used when initiating this deployment
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  getLatestActiveTaskDefinition(options, cb) {
+  getLatestActiveTaskDefinition(options) {
+    if (!options.taskDefinitionFamily) return Promise.resolve();
+
     const ecs = new ECS({ region: region });
 
     const params = {
@@ -109,15 +99,14 @@ Object.assign(updater, {
       status: 'ACTIVE'
     };
 
-    ecs.listTaskDefinitions(params)
+    return ecs.listTaskDefinitions(params)
       .then((data) => {
         if (data.taskDefinitionArns.length === 0) {
-          return cb(new Error(`No Task Definitions found in family "${family}"`));
+          throw new Error(`No Task Definitions found in family "${family}"`);
         }
 
-        cb(null, data.taskDefinitionArns[0]);
-      })
-      .catch(err => cb(err));
+        return data.taskDefinitionArns[0];
+      });
   },
 
   /**
@@ -125,15 +114,14 @@ Object.assign(updater, {
    *
    * Retrieve a task definition
    * @param {object} options A hash of options used when initiating this deployment
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  getTaskDefinition(taskDefinitionArn, cb) {
+  getTaskDefinition(taskDefinitionArn) {
     const ecs = new ECS({ region: region });
     const params = { taskDefinition: taskDefinitionArn };
 
-    ecs.describeTaskDefinition(params)
-      .then(data => cb(null, data.taskDefinition));
-    // .catch is not here to allow errors to propagate properly without double-calling the callback function.
+    return ecs.describeTaskDefinition(params)
+      .then(data => data.taskDefinition);
   },
 
   updateTaskDefinitionImage(taskDefinition, containerNames, image) {
