@@ -41,21 +41,31 @@ Object.assign(updater, {
       return cb(new Error('Ensure either the serviceName or taskDefinitionFamily option are specified'));
     }
 
-    async.parallel([
-      (done) => {
-        if (!options.taskDefinitionFamily) return done();
-        return updater.getLatestActiveTaskDefinition(options, done);
-      },
-      (done) => {
-        if (!options.serviceName) return done();
-        return updater.getServiceTaskDefinition(options, done)
-      }
-    ], (err, results) => {
-      if (err) return cb(err);
-      const taskDefinitionArn = _.filter(results, (result) => result)[0];
-      if (!taskDefinitionArn) return cb(new Error('Error could not find task definition'));
-      updater.getTaskDefinition(taskDefinitionArn, cb);
+    const latestTaskDefinition = new Promise((resolve, reject) => {
+      if (!options.taskDefinitionFamily) resolve();
+
+      updater.getLatestActiveTaskDefinition(options, (err, result) => {
+        if (err) { reject(err); }
+        else { resolve(result); }
+      });
     });
+    const serviceTaskDefinition = new Promise((resolve, reject) => {
+      if (!options.serviceName) resolve();
+
+      updater.getServiceTaskDefinition(options, (err, result) => {
+        if (err) { reject(err); }
+        else { resolve(result); }
+      });
+    })
+
+    Promise.all([latestTaskDefinition, serviceTaskDefinition])
+      .then((results) => {
+        const taskDefinitionArn = _.filter(results, (result) => result)[0];
+        if (!taskDefinitionArn) throw new Error('Error could not find task definition');
+
+        updater.getTaskDefinition(taskDefinitionArn, cb);
+      })
+      .catch(err => cb(err));
   },
 
   /**

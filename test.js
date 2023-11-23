@@ -1,6 +1,5 @@
 'use strict'
 
-const path = require('path');
 const expect = require('expect.js');
 const { ECS, DescribeServicesCommand, ListTaskDefinitionsCommand, DescribeTaskDefinitionCommand, RegisterTaskDefinitionCommand, UpdateServiceCommand } = require('@aws-sdk/client-ecs');
 const { mockClient } = require('aws-sdk-client-mock');
@@ -39,8 +38,8 @@ describe('ECS Service Image Updater', function () {
       return cb(null, { taskDefinitionArn: taskDefinitionArn });
     };
 
-    updater.currentTaskDefinition({ serviceName: serviceName }, function (err, taskDefintion) {
-      expect(taskDefintion.taskDefinitionArn).to.equal(taskDefinitionArn);
+    updater.currentTaskDefinition({ serviceName: serviceName }, function (err, taskDefinition) {
+      expect(taskDefinition.taskDefinitionArn).to.equal(taskDefinitionArn);
       done();
     });
   });
