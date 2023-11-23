@@ -1,7 +1,14 @@
 'use strict'
 
 const expect = require('expect.js');
-const { ECS, DescribeServicesCommand, ListTaskDefinitionsCommand, DescribeTaskDefinitionCommand, RegisterTaskDefinitionCommand, UpdateServiceCommand } = require('@aws-sdk/client-ecs');
+const {
+  ECS,
+  DescribeServicesCommand,
+  ListTaskDefinitionsCommand,
+  DescribeTaskDefinitionCommand,
+  RegisterTaskDefinitionCommand,
+  UpdateServiceCommand
+} = require('@aws-sdk/client-ecs');
 const { mockClient } = require('aws-sdk-client-mock');
 
 const updater = require('./');
@@ -26,12 +33,13 @@ describe('ECS Service Image Updater', function () {
     const taskDefinitionArn = 'arn::good-news:96';
 
     updater.getServiceTaskDefinition = () => Promise.resolve(taskDefinitionArn);
-    updater.getTaskDefinition = _taskDefinitionArnSupplied => Promise.resolve({ taskDefinitionArn: taskDefinitionArn });
+    updater.getTaskDefinition = () => Promise.resolve({ taskDefinitionArn: taskDefinitionArn });
 
-    updater.currentTaskDefinition({ serviceName: serviceName }, function (err, taskDefinition) {
-      expect(taskDefinition.taskDefinitionArn).to.equal(taskDefinitionArn);
-      done();
-    });
+    updater.currentTaskDefinition({ serviceName: serviceName })
+      .then((taskDefinition) => {
+        expect(taskDefinition.taskDefinitionArn).to.equal(taskDefinitionArn);
+        done();
+      });
   });
 
   it('currentTaskDefinition should return the current task definition in a Task Definition Family', function (done) {
@@ -41,10 +49,11 @@ describe('ECS Service Image Updater', function () {
     updater.getLatestActiveTaskDefinition = () => Promise.resolve(taskDefinitionArn);
     updater.getTaskDefinition = _taskDefinitionArnSupplied => Promise.resolve({ taskDefinitionArn: taskDefinitionArn });
 
-    updater.currentTaskDefinition({ taskDefinitionFamily: family }, function (err, taskDefintion) {
-      expect(taskDefintion.taskDefinitionArn).to.equal(taskDefinitionArn);
-      done();
-    });
+    updater.currentTaskDefinition({ taskDefinitionFamily: family })
+      .then((taskDefinition) => {
+        expect(taskDefinition.taskDefinitionArn).to.equal(taskDefinitionArn);
+        done();
+      });
   });
 
   it('getServiceTaskDefinition should get the active task definition in Service', function (done) {
@@ -192,9 +201,9 @@ describe('ECS Service Image Updater', function () {
     });
 
     it('should do it all more good', function (done) {
-      updater.currentTaskDefinition = function (optionsSupplied, cb) {
+      updater.currentTaskDefinition = (optionsSupplied) => {
         expect(optionsSupplied).to.eql(options);
-        cb(null, { taskDefinitionArn: 'arn' });
+        return Promise.resolve({ taskDefinitionArn: 'arn' });
       };
 
       updater.updateTaskDefinitionImage = function (taskDefinition, containerName, image) {

@@ -11,7 +11,13 @@ const updater = function (options, cb) {
   const ecs = new ECS({ region: region });
 
   async.waterfall([
-    (next) => updater.currentTaskDefinition(options, next),
+    (next) => {
+      updater.currentTaskDefinition(options)
+        .then((taskDefinition) => {
+          next(null, taskDefinition);
+        })
+        .catch(err => next(err));
+    },
     (currentTaskDefinition, next) => {
       const newTaskDefinition = updater.updateTaskDefinitionImage(
         currentTaskDefinition,
@@ -39,14 +45,14 @@ Object.assign(updater, {
    *
    * Retrieve the currently deployed Task Definintion
    * @param {object} options A hash of options used when initiating this deployment
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  currentTaskDefinition(options, cb) {
+  currentTaskDefinition(options) {
     if (!options.serviceName && !options.taskDefinitionFamily) {
-      return cb(new Error('Ensure either the serviceName or taskDefinitionFamily option are specified'));
+      throw new Error('Ensure either the serviceName or taskDefinitionFamily option are specified');
     }
 
-    Promise.all([
+    return Promise.all([
       updater.getLatestActiveTaskDefinition(options),
       updater.getServiceTaskDefinition(options)
     ])
@@ -55,9 +61,7 @@ Object.assign(updater, {
         if (!taskDefinitionArn) throw new Error('Error could not find task definition');
 
         return updater.getTaskDefinition(taskDefinitionArn);
-      })
-      .then(taskDefinition => cb(null, taskDefinition))
-      .catch(err => cb(err));
+      });
   },
 
   /**
