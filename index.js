@@ -8,6 +8,8 @@ const _ = require('lodash');
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 
 const updater = function (options, cb) {
+  const ecs = new ECS({ region: region });
+
   async.waterfall([
     (next) => updater.currentTaskDefinition(options, next),
     (currentTaskDefinition, next) => {
@@ -17,7 +19,11 @@ const updater = function (options, cb) {
         options.image
       );
 
-      return updater.createTaskDefinition(newTaskDefinition, next);
+      ecs.registerTaskDefinition(newTaskDefinition)
+        .then((taskDefinition) => {
+          next(null, taskDefinition);
+        })
+        .catch(err => next(err));
     },
     (taskDefinition, next) => {
       if (!options.serviceName) return next(null, taskDefinition.taskDefinitionArn);
@@ -153,23 +159,6 @@ Object.assign(updater, {
       'cpu',
       'memory'
     ]);
-  },
-
-  /**
-   * createTaskDefinition
-   *
-   * Create a new Task Definition based on the currently deployed
-   * Task Definition but with an updated container image.
-   *
-   * @param {object} newTaskDefinition New task definition to create
-   * @param {function} cb Callback
-   */
-  createTaskDefinition(newTaskDefinition, cb) {
-    const ecs = new ECS({ region: region });
-
-    ecs.registerTaskDefinition(newTaskDefinition)
-      .then(data => cb(null, data.taskDefinition))
-      .catch(err => cb(err));
   },
 
   /**

@@ -158,24 +158,6 @@ describe('ECS Service Image Updater', function () {
     expect(updatedTaskDefinition['containerDefinitions'][2]['image']).to.equal(oldImage);
   });
 
-  it('createTaskDefinition should register new task definition', function (done) {
-    const taskDefinition = {
-      family: 'boo',
-      containerDefinitions: []
-    };
-
-    ecsMock.on(RegisterTaskDefinitionCommand).callsFake((newTaskDefinition) => {
-      expect(newTaskDefinition).to.eql(taskDefinition);
-      return Promise.resolve({ 'taskDefinition': newTaskDefinition });
-    });
-
-    updater.createTaskDefinition(taskDefinition, (err, taskDefinitionCreated) => {
-      expect(err).to.equal(null);
-      expect(taskDefinition).to.eql(taskDefinitionCreated);
-      done();
-    });
-  });
-
   it('updateService should update Service to use new Task Definition', function (done) {
     ecsMock.on(UpdateServiceCommand).callsFake((params) => {
       expect(params).to.eql({
@@ -201,13 +183,11 @@ describe('ECS Service Image Updater', function () {
   describe('Wrap up', function () {
     const oldCurrentTaskDefinitionFn = updater.currentTaskDefinition;
     const oldUpdateTaskDefinitionImageFn = updater.updateTaskDefinitionImage;
-    const oldCreateTaskDefinitionFn = updater.createTaskDefinition;
     const oldUpdateServiceFn = updater.updateService;
 
     after(() => {
       updater.currentTaskDefinition = oldCurrentTaskDefinitionFn;
       updater.updateTaskDefinitionImage = oldUpdateTaskDefinitionImageFn;
-      updater.createTaskDefinition = oldCreateTaskDefinitionFn;
       updater.updateService = oldUpdateServiceFn;
     });
 
@@ -224,10 +204,10 @@ describe('ECS Service Image Updater', function () {
         return { taskDefinitionArn: 'arn:updated' };
       };
 
-      updater.createTaskDefinition = function (taskDefinition, cb) {
+      ecsMock.on(RegisterTaskDefinitionCommand).callsFake((taskDefinition) => {
         expect(taskDefinition.taskDefinitionArn).to.equal('arn:updated');
-        cb(null, { taskDefinitionArn: 'arn:created' });
-      };
+        return Promise.resolve({ taskDefinitionArn: 'arn:created' });
+      });
 
       updater.updateService = function (optionsSupplied, taskDefinitionArn, cb) {
         expect(optionsSupplied).to.eql(options);
