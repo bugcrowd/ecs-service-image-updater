@@ -1,42 +1,41 @@
 'use strict'
 
 const { ECS } = require("@aws-sdk/client-ecs");
-const async = require('async');
 const _ = require('lodash');
 
 // Set the default region to 'us-east-1' if not already set
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 
+/**
+ * updater
+ *
+ * Run the end-to-end image updating process on a service or task definition.
+ * @param {object} options A hash of options used when initiating this deployment
+ * @return {Promise}
+ */
 const updater = function (options, cb) {
   const ecs = new ECS({ region: region });
 
-  async.waterfall([
-    (next) => {
-      updater.currentTaskDefinition(options)
-        .then((taskDefinition) => {
-          next(null, taskDefinition);
-        })
-        .catch(err => next(err));
-    },
-    (currentTaskDefinition, next) => {
+  let taskDefinitionArn; // preserve this in the outer scope
+
+  updater.currentTaskDefinition(options)
+    .then((currentTaskDefinition) => {
       const newTaskDefinition = updater.updateTaskDefinitionImage(
         currentTaskDefinition,
         options.containerNames,
         options.image
       );
 
-      ecs.registerTaskDefinition(newTaskDefinition)
-        .then(data => next(null, data.taskDefinition))
-        .catch(err => next(err));
-    },
-    (taskDefinition, next) => {
-      if (!options.serviceName) return next(null, taskDefinition.taskDefinitionArn);
+      return ecs.registerTaskDefinition(newTaskDefinition);
+    })
+    .then((data) => {
+      taskDefinitionArn = data.taskDefinition.taskDefinitionArn;
+      if (!options.serviceName) return Promise.resolve(taskDefinitionArn);
 
-      updater.updateService(options, taskDefinition.taskDefinitionArn)
-        .then(service => next(null, taskDefinition.taskDefinitionArn))
-        .catch(err => next(err));
-    }
-  ], cb);
+      return updater.updateService(options, taskDefinitionArn)
+    })
+    .then(_service => cb(null, taskDefinitionArn))
+    .catch(err => cb(err));
 }
 
 Object.assign(updater, {

@@ -194,6 +194,13 @@ describe('ECS Service Image Updater', function () {
     const oldUpdateTaskDefinitionImageFn = updater.updateTaskDefinitionImage;
     const oldUpdateServiceFn = updater.updateService;
 
+    const options = {
+      clusterArn: 'arn:cluster',
+      serviceName: 'serviceName',
+      containerNames: ['containerName'],
+      image: 'image:1'
+    };
+
     after(() => {
       updater.currentTaskDefinition = oldCurrentTaskDefinitionFn;
       updater.updateTaskDefinitionImage = oldUpdateTaskDefinitionImageFn;
@@ -222,13 +229,6 @@ describe('ECS Service Image Updater', function () {
         expect(optionsSupplied).to.eql(options);
         expect(taskDefinitionArn).to.equal('arn:created');
         return Promise.resolve({ taskDefinition: 'arn:created' });
-      }
-
-      const options = {
-        clusterArn: 'arn:cluster',
-        serviceName: 'serviceName',
-        containerNames: ['containerName'],
-        image: 'image:1'
       }
 
       updater(options, (err, deploy) => {
