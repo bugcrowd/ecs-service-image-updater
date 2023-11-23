@@ -13,12 +13,12 @@ const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
  * @param {object} options A hash of options used when initiating this deployment
  * @return {Promise}
  */
-const updater = function (options, cb) {
+const updater = function (options) {
   const ecs = new ECS({ region: region });
 
   let taskDefinitionArn; // preserve this in the outer scope
 
-  updater.currentTaskDefinition(options)
+  return updater.currentTaskDefinition(options)
     .then((currentTaskDefinition) => {
       const newTaskDefinition = updater.updateTaskDefinitionImage(
         currentTaskDefinition,
@@ -34,9 +34,8 @@ const updater = function (options, cb) {
 
       return updater.updateService(options, taskDefinitionArn)
     })
-    .then(_service => cb(null, taskDefinitionArn))
-    .catch(err => cb(err));
-}
+    .then(_service => taskDefinitionArn);
+};
 
 Object.assign(updater, {
   /**

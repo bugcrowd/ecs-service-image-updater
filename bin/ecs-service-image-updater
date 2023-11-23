@@ -31,21 +31,21 @@ if (argv.containerName) options.containerNames = [argv.containerName];
 if (argv.serviceName) options.serviceName = argv.serviceName;
 if (argv.taskDefinitionFamily) options.taskDefinitionFamily = argv.taskDefinitionFamily;
 
-updater(options, (err, taskDefinitionArn) => {
-  if (err) {
+updater(options)
+  .then((taskDefinitionArn) => {
+    if (argv.outputArnOnly) {
+      console.log(taskDefinitionArn);
+      return;
+    }
+
+    console.log(`Created Task Definition: ${taskDefinitionArn}`);
+
+    if (argv.serviceName) {
+      console.log(`Service ${argv.serviceName} has been updated to use the new Task Definition`);
+      return;
+    }
+  })
+  .catch((err) => {
     console.log(err.toString());
     process.exit(1);
-  }
-
-  if (argv.outputArnOnly) {
-    console.log(taskDefinitionArn);
-    return;
-  }
-
-  console.log(`Created Task Definition: ${taskDefinitionArn}`);
-
-  if (argv.serviceName) {
-    console.log(`Service ${argv.serviceName} has been updated to use the new Task Definition`);
-    return;
-  }
-});
+  });

@@ -231,10 +231,8 @@ describe('ECS Service Image Updater', function () {
         return Promise.resolve({ taskDefinition: 'arn:created' });
       }
 
-      updater(options, (err, deploy) => {
-        expect(err).to.equal(null);
-        done();
-      });
+      updater(options)
+        .then(() => done());
     });
   });
 });
