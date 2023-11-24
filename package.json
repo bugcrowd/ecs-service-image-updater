@@ -1,6 +1,6 @@
 {
   "name": "@bugcrowd/ecs-service-image-updater",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Update an ECS service with a new Docker image",
   "main": "index.js",
   "scripts": {
@@ -26,7 +26,6 @@
   "homepage": "https://github.com/bugcrowd/ecs-service-image-updater#readme",
   "dependencies": {
     "@aws-sdk/client-ecs": "^3.454.0",
-    "async": "^3.2.0",
     "lodash": "^4.17.19",
     "yargs": "^15.0.2"
   },

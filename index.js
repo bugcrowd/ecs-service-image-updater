@@ -1,32 +1,41 @@
 'use strict'
 
 const { ECS } = require("@aws-sdk/client-ecs");
-const async = require('async');
 const _ = require('lodash');
 
 // Set the default region to 'us-east-1' if not already set
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 
-const updater = function (options, cb) {
-  async.waterfall([
-    (next) => updater.currentTaskDefinition(options, next),
-    (currentTaskDefinition, next) => {
+/**
+ * updater
+ *
+ * Run the end-to-end image updating process on a service or task definition.
+ * @param {object} options A hash of options used when initiating this deployment
+ * @return {Promise}
+ */
+const updater = function (options) {
+  const ecs = new ECS({ region: region });
+
+  let taskDefinitionArn; // preserve this in the outer scope
+
+  return updater.currentTaskDefinition(options)
+    .then((currentTaskDefinition) => {
       const newTaskDefinition = updater.updateTaskDefinitionImage(
         currentTaskDefinition,
         options.containerNames,
         options.image
       );
 
-      return updater.createTaskDefinition(newTaskDefinition, next);
-    },
-    (taskDefinition, next) => {
-      if (!options.serviceName) return next(null, taskDefinition.taskDefinitionArn);
-      return updater.updateService(options, taskDefinition.taskDefinitionArn, (err, service) => {
-        return next(err, taskDefinition.taskDefinitionArn);
-      });
-    }
-  ], cb);
-}
+      return ecs.registerTaskDefinition(newTaskDefinition);
+    })
+    .then((data) => {
+      taskDefinitionArn = data.taskDefinition.taskDefinitionArn;
+      if (!options.serviceName) return Promise.resolve(taskDefinitionArn);
+
+      return updater.updateService(options, taskDefinitionArn)
+    })
+    .then(_service => taskDefinitionArn);
+};
 
 Object.assign(updater, {
   /**
@@ -34,28 +43,23 @@ Object.assign(updater, {
    *
    * Retrieve the currently deployed Task Definintion
    * @param {object} options A hash of options used when initiating this deployment
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  currentTaskDefinition(options, cb) {
+  currentTaskDefinition(options) {
     if (!options.serviceName && !options.taskDefinitionFamily) {
-      return cb(new Error('Ensure either the serviceName or taskDefinitionFamily option are specified'));
+      throw new Error('Ensure either the serviceName or taskDefinitionFamily option are specified');
     }
 
-    async.parallel([
-      (done) => {
-        if (!options.taskDefinitionFamily) return done();
-        return updater.getLatestActiveTaskDefinition(options, done);
-      },
-      (done) => {
-        if (!options.serviceName) return done();
-        return updater.getServiceTaskDefinition(options, done)
-      }
-    ], (err, results) => {
-      if (err) return cb(err);
-      const taskDefinitionArn = _.filter(results, (result) => result)[0];
-      if (!taskDefinitionArn) return cb(new Error('Error could not find task definition'));
-      updater.getTaskDefinition(taskDefinitionArn, cb);
-    });
+    return Promise.all([
+      updater.getLatestActiveTaskDefinition(options),
+      updater.getServiceTaskDefinition(options)
+    ])
+      .then((results) => {
+        const taskDefinitionArn = _.filter(results, (result) => result)[0];
+        if (!taskDefinitionArn) throw new Error('Error could not find task definition');
+
+        return updater.getTaskDefinition(taskDefinitionArn);
+      });
   },
 
   /**
@@ -63,9 +67,11 @@ Object.assign(updater, {
    *
    * Retrieve the active Task Definition Arn on a service
    * @param {object} options A hash of options used when initiating this deployment
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  getServiceTaskDefinition(options, cb) {
+  getServiceTaskDefinition(options) {
+    if (!options.serviceName) return Promise.resolve();
+
     const ecs = new ECS({ region: region });
 
     const params = {
@@ -73,14 +79,13 @@ Object.assign(updater, {
       services: [options.serviceName]
     };
 
-    ecs.describeServices(params)
+    return ecs.describeServices(params)
       .then((data) => {
         const service = _.find(data.services, (s) => s.serviceName === options.serviceName);
         if (!service) throw new Error(`Could not find service "${options.serviceName}"`);
 
-        cb(null, service.taskDefinition);
-      })
-      .catch(err => cb(err));
+        return service.taskDefinition;
+      });
   },
 
   /**
@@ -88,9 +93,11 @@ Object.assign(updater, {
    *
    * Retrieve the newest Task Definition Arn in a Task Definition Family
    * @param {object} options A hash of options used when initiating this deployment
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  getLatestActiveTaskDefinition(options, cb) {
+  getLatestActiveTaskDefinition(options) {
+    if (!options.taskDefinitionFamily) return Promise.resolve();
+
     const ecs = new ECS({ region: region });
 
     const params = {
@@ -99,15 +106,14 @@ Object.assign(updater, {
       status: 'ACTIVE'
     };
 
-    ecs.listTaskDefinitions(params)
+    return ecs.listTaskDefinitions(params)
       .then((data) => {
         if (data.taskDefinitionArns.length === 0) {
-          return cb(new Error(`No Task Definitions found in family "${family}"`));
+          throw new Error(`No Task Definitions found in family "${family}"`);
         }
 
-        cb(null, data.taskDefinitionArns[0]);
-      })
-      .catch(err => cb(err));
+        return data.taskDefinitionArns[0];
+      });
   },
 
   /**
@@ -115,15 +121,14 @@ Object.assign(updater, {
    *
    * Retrieve a task definition
    * @param {object} options A hash of options used when initiating this deployment
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  getTaskDefinition(taskDefinitionArn, cb) {
+  getTaskDefinition(taskDefinitionArn) {
     const ecs = new ECS({ region: region });
     const params = { taskDefinition: taskDefinitionArn };
 
-    ecs.describeTaskDefinition(params)
-      .then(data => cb(null, data.taskDefinition));
-    // .catch is not here to allow errors to propagate properly without double-calling the callback function.
+    return ecs.describeTaskDefinition(params)
+      .then(data => data.taskDefinition);
   },
 
   updateTaskDefinitionImage(taskDefinition, containerNames, image) {
@@ -158,31 +163,14 @@ Object.assign(updater, {
   },
 
   /**
-   * createTaskDefinition
-   *
-   * Create a new Task Definition based on the currently deployed
-   * Task Definition but with an updated container image.
-   *
-   * @param {object} newTaskDefinition New task definition to create
-   * @param {function} cb Callback
-   */
-  createTaskDefinition(newTaskDefinition, cb) {
-    const ecs = new ECS({ region: region });
-
-    ecs.registerTaskDefinition(newTaskDefinition)
-      .then(data => cb(null, data.taskDefinition))
-      .catch(err => cb(err));
-  },
-
-  /**
    * updateService
    *
    * Update the service to use a new Task Definition
    * @param {object} options A hash of options used when initiating this deployment
    * @param {sting} taskDefinitionArn The task definition to deploy
-   * @param {function} cb Callback
+   * @return {Promise}
    */
-  updateService(options, taskDefinitionArn, cb) {
+  updateService(options, taskDefinitionArn) {
     const ecs = new ECS({ region: region });
     const params = {
       cluster: options.clusterArn,
@@ -190,9 +178,8 @@ Object.assign(updater, {
       taskDefinition: taskDefinitionArn
     };
 
-    ecs.updateService(params)
-      .then(data => cb(null, data.service))
-      .catch(err => cb(err));
+    return ecs.updateService(params)
+      .then(data => data.service);
   },
 });
 

@@ -47,8 +47,11 @@ const options = {
   image: 'image:tag'
 }
 
-updater(options, (err, taskDefinitionArn) => {
-  if (err) throw err;
-  console.log('done');
-});
+updater(options)
+  .then((taskDefinitionArn) => {
+    console.log(`Done. New task definition: ${taskDefinitionArn}`);
+  })
+  .catch((err) => {
+    console.log(err);
+  });
 ```
