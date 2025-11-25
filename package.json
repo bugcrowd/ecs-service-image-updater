@@ -1,6 +1,6 @@
 {
   "name": "@bugcrowd/ecs-service-image-updater",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Update an ECS service with a new Docker image",
   "main": "index.js",
   "scripts": {
